@@ -6,9 +6,14 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "upload-report": "node upload-report.js",
+    "generate-and-upload": "npm run build && node upload-report.js",
+    "start-upload-server": "node upload-server.js"
   },
   "dependencies": {
+    "cors": "^2.8.5",
+    "express": "^5.2.1",
     "html2canvas": "^1.4.1",
     "lucide-react": "^0.560.0",
     "qrcode.react": "^4.2.0",

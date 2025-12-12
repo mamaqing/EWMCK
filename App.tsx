@@ -13,6 +13,12 @@ import html2canvas from 'html2canvas';
 
 const App: React.FC = () => {
   const [metrics, setMetrics] = useState<Record<string, MetricData>>(INITIAL_METRICS);
+  // 报告容器ref用于截图
+  const reportRef = useRef<HTMLDivElement>(null);
+  // 本地图片URL状态
+  const [localImageURL, setLocalImageURL] = useState<string>('');
+  // 图片生成状态
+  const [isGenerating, setIsGenerating] = useState(false);
 
   // Initialize descriptions on load
   useEffect(() => {
@@ -24,6 +30,43 @@ const App: React.FC = () => {
     });
     setMetrics(updatedMetrics);
   }, []);
+
+  // 监听metrics变化，自动生成新图片
+  useEffect(() => {
+    const generateAndSaveReport = async () => {
+    if (!reportRef.current) return;
+    
+    try {
+      setIsGenerating(true);
+      
+      // 使用html2canvas生成报告图片
+      const canvas = await html2canvas(reportRef.current, {
+        scale: 1.5, // 调整分辨率平衡质量和大小
+        useCORS: true,
+        backgroundColor: '#ffffff'
+      });
+      
+      // 设置图片质量以减小文件大小，改用JPEG格式提高压缩率
+      const imgURL = canvas.toDataURL('image/jpeg', 0.6);
+      setLocalImageURL(imgURL);
+      
+      // 这里可以添加自动上传到GitHub的逻辑
+      // 由于涉及文件系统和git命令，需要在浏览器环境外实现
+      
+    } catch (error) {
+      console.error('生成报告图片失败:', error);
+    } finally {
+      setIsGenerating(false);
+    }
+  };
+    
+    // 延迟生成，避免频繁生成
+    const timer = setTimeout(() => {
+      generateAndSaveReport();
+    }, 1000);
+    
+    return () => clearTimeout(timer);
+  }, [metrics]); // 监听metrics变化
 
   const handleMetricChange = (key: CategoryKey, value: number) => {
     // Get dynamic evaluation text based on new value
@@ -83,16 +126,14 @@ const App: React.FC = () => {
 
   // QR Code state
   const [showQRCode, setShowQRCode] = useState(false);
-  // 报告容器ref用于截图
-  const reportRef = useRef<HTMLDivElement>(null);
-  // 本地图片URL状态
-  const [localImageURL, setLocalImageURL] = useState<string>('');
-  // 二维码URL，使用完整的GitHub Pages URL以便扫码后能正确访问
-  // 确保图片文件已上传到GitHub的"报告图片"目录
-  const reportURL = "https://mamaqing.github.io/EWMCK/报告图片/认知评估报告.png";
+  // 二维码URL，使用GitHub Pages上的图片URL
+  // 由于DataURL太长，我们使用GitHub上的图片路径
+  const reportURL = `https://mamaqing.github.io/EWMCK/报告图片/认知评估报告.png?version=${Date.now()}`;
   // 图片加载状态
   const [imageLoaded, setImageLoaded] = useState(false);
   const [imageError, setImageError] = useState(false);
+  // 图片保存路径
+  const imageSavePath = "./报告图片/认知评估报告.png";
 
   return (
     <div 
@@ -268,15 +309,16 @@ const App: React.FC = () => {
                 if (!reportRef.current) return;
                 
                 try {
-                  // 使用html2canvas生成报告图片
+                  setIsGenerating(true);
+                  // 使用html2canvas生成报告图片，设置scale和质量以平衡质量和大小
                   const canvas = await html2canvas(reportRef.current, {
-                    scale: 2, // 提高分辨率
+                    scale: 1.5, // 调整分辨率平衡质量和大小
                     useCORS: true,
                     backgroundColor: '#ffffff'
                   });
                   
-                  // 创建图片URL
-                  const imgURL = canvas.toDataURL('image/png');
+                  // 设置图片质量以减小文件大小，改用JPEG格式提高压缩率
+                  const imgURL = canvas.toDataURL('image/jpeg', 0.6);
                   setLocalImageURL(imgURL);
                   
                   // 保存图片到本地
@@ -288,11 +330,13 @@ const App: React.FC = () => {
                   // 同时显示二维码
                   setShowQRCode(true);
                   
-                  // 提示用户扫码查看
-                  alert('报告图片已生成并保存！二维码已更新，可以直接扫码查看本地生成的报告图片。');
+                  // 提示用户
+                  alert('报告图片已生成并保存！正在上传到GitHub，请稍后刷新二维码...');
                 } catch (error) {
                   console.error('生成报告图片失败:', error);
                   alert('生成报告图片失败，请重试');
+                } finally {
+                  setIsGenerating(false);
                 }
               }}
               className="flex items-center gap-2 px-6 py-3 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors duration-200 shadow-md hover:shadow-lg"
@@ -302,7 +346,55 @@ const App: React.FC = () => {
             </button>
             
             <button 
-              onClick={() => setShowQRCode(!showQRCode)}
+              onClick={async () => {
+                setShowQRCode(!showQRCode);
+                
+                // 如果是显示二维码，并且报告容器存在，则生成图片并上传
+                if (!showQRCode && reportRef.current) {
+                  try {
+                    setIsGenerating(true);
+                    
+                    // 使用html2canvas生成报告图片
+                    const canvas = await html2canvas(reportRef.current, {
+                      scale: 1.5, // 调整分辨率平衡质量和大小
+                      useCORS: true,
+                      backgroundColor: '#ffffff'
+                    });
+                    
+                    // 设置图片质量以减小文件大小，改用JPEG格式提高压缩率
+                    const imgURL = canvas.toDataURL('image/jpeg', 0.6);
+                    setLocalImageURL(imgURL);
+                    
+                    // 上传图片到GitHub
+                    try {
+                      const response = await fetch('http://localhost:3001/upload-report', {
+                        method: 'POST',
+                        headers: {
+                          'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({ imageData: imgURL })
+                      });
+                      
+                      const result = await response.json();
+                      if (result.success) {
+                        alert('✅ 报告图片已成功上传到GitHub Pages！');
+                      } else {
+                        throw new Error(result.error || '上传失败');
+                      }
+                    } catch (error) {
+                      console.error('上传失败:', error);
+                      // 提供手动上传选项
+                      alert(`⚠️ 自动上传失败：${error.message}\n\n解决方案：\n1. 先将图片保存到本地（已自动完成）\n2. 手动将本地图片上传到GitHub Pages\n3. 或使用GitHub Desktop工具推送更改\n\n二维码已生成，可正常使用`);
+                    }
+                    
+                  } catch (error) {
+                    console.error('生成或上传报告图片失败:', error);
+                    alert('生成或上传报告图片失败，请检查上传服务器是否运行并重试');
+                  } finally {
+                    setIsGenerating(false);
+                  }
+                }
+              }}
               className="flex items-center gap-2 px-6 py-3 bg-slate-900 text-white rounded-lg hover:bg-slate-800 transition-colors duration-200 shadow-md hover:shadow-lg"
             >
               <QrCode size={18} />
