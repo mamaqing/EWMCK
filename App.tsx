@@ -83,7 +83,7 @@ const App: React.FC = () => {
   // QR Code state
   const [showQRCode, setShowQRCode] = useState(false);
   // 将本地URL改为GitHub Pages的公开URL
-  const reportURL = "https://mamaqing.github.io/EWMCK/报告图片/[图片文件名]";
+  const reportURL = "https://mamaqing.github.io/EWMCK/报告图片/认知评估报告.png";
 
   return (
     <div 
