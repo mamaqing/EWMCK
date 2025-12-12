@@ -2,15 +2,43 @@
 
 ## 1. 在GitHub上设置GitHub Pages
 
+### 方法一：直接部署根目录（简单但不推荐用于生产环境）
+
 1. 登录您的GitHub账户，进入仓库 `mamaqing/EWMCK`
 2. 点击顶部的 `Settings` 选项卡
 3. 在左侧菜单中找到并点击 `Pages`
 4. 在 `Build and deployment` 部分：
    - **Source**: 选择 `Deploy from a branch`
-   - **Branch**: 选择 `master` 分支（不是main分支，因为项目实际使用master分支）
-   - **Directory**: 选择 `/(root)` 目录（不要选择docs，因为项目中没有docs目录）
+   - **Branch**: 必须选择 `master` 分支（**重要**：项目只有master分支，没有main分支，选择main会导致无法保存）
+   - **Directory**: 选择 `/(root)` 目录
    - 点击 `Save` 按钮
 5. 等待几分钟，GitHub Pages将自动构建并部署您的网站
+
+### 方法二：部署构建后的dist目录（推荐用于生产环境）
+
+1. 首先运行构建命令生成生产环境代码：
+   ```bash
+   npm run build
+   ```
+
+2. 构建完成后，项目根目录会生成 `dist` 目录，包含了优化后的生产环境代码。
+
+3. 登录您的GitHub账户，进入仓库 `mamaqing/EWMCK`
+4. 点击顶部的 `Settings` 选项卡
+5. 在左侧菜单中找到并点击 `Pages`
+6. 在 `Build and deployment` 部分：
+   - **Source**: 选择 `Deploy from a branch`
+   - **Branch**: 必须选择 `master` 分支
+   - **Directory**: 选择 `/dist` 目录
+   - 点击 `Save` 按钮
+7. 提交并推送构建后的 `dist` 目录到GitHub仓库：
+   ```bash
+   git add dist/
+   git commit -m "Add production build"
+   git push origin master
+   ```
+
+8. 等待几分钟，GitHub Pages将自动构建并部署您的网站
 
 ## 2. 上传报告图片
 
