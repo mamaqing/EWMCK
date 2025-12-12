@@ -41,13 +41,13 @@ const App: React.FC = () => {
       
       // 使用html2canvas生成报告图片
       const canvas = await html2canvas(reportRef.current, {
-        scale: 1.5, // 调整分辨率平衡质量和大小
+        scale: 1.0, // 降低分辨率以减小文件大小
         useCORS: true,
         backgroundColor: '#ffffff'
       });
       
-      // 设置图片质量以减小文件大小，改用JPEG格式提高压缩率
-      const imgURL = canvas.toDataURL('image/jpeg', 0.6);
+      // 设置图片为PNG格式，通过调整scale来控制文件大小
+      const imgURL = canvas.toDataURL('image/png');
       setLocalImageURL(imgURL);
       
       // 这里可以添加自动上传到GitHub的逻辑
@@ -310,15 +310,15 @@ const App: React.FC = () => {
                 
                 try {
                   setIsGenerating(true);
-                  // 使用html2canvas生成报告图片，设置scale和质量以平衡质量和大小
+                  // 使用html2canvas生成报告图片，降低scale以减小文件大小
                   const canvas = await html2canvas(reportRef.current, {
-                    scale: 1.5, // 调整分辨率平衡质量和大小
+                    scale: 1.0, // 降低分辨率以减小文件大小
                     useCORS: true,
                     backgroundColor: '#ffffff'
                   });
                   
-                  // 设置图片质量以减小文件大小，改用JPEG格式提高压缩率
-                  const imgURL = canvas.toDataURL('image/jpeg', 0.6);
+                  // 设置图片为PNG格式，通过调整scale来控制文件大小
+                  const imgURL = canvas.toDataURL('image/png');
                   setLocalImageURL(imgURL);
                   
                   // 保存图片到本地
@@ -361,8 +361,8 @@ const App: React.FC = () => {
                       backgroundColor: '#ffffff'
                     });
                     
-                    // 设置图片质量以减小文件大小，改用JPEG格式提高压缩率
-                    const imgURL = canvas.toDataURL('image/jpeg', 0.6);
+                    // 使用JPG格式生成图片，质量设置为0.9以平衡大小和质量
+                    const imgURL = canvas.toDataURL('image/jpeg', 0.9);
                     setLocalImageURL(imgURL);
                     
                     // 上传图片到GitHub
@@ -377,7 +377,30 @@ const App: React.FC = () => {
                       
                       const result = await response.json();
                       if (result.success) {
-                        alert('✅ 报告图片已成功上传到GitHub Pages！');
+                        if (result.uploadFailed) {
+                          // 图片已保存到本地，但上传到GitHub失败
+                          let errorMessage = '⚠️ 报告图片已成功保存到本地，但上传到GitHub失败！';
+                          let solutions = '\n\n解决方案：';
+                          
+                          if (result.errorType === 'network') {
+                            errorMessage += '（网络连接问题）';
+                            solutions += '\n1. 检查网络连接和代理设置';
+                            solutions += '\n2. 确保可以访问GitHub网站';
+                          } else {
+                            errorMessage += '（Git配置或权限问题）';
+                            solutions += '\n1. 检查Git配置和SSH密钥';
+                            solutions += '\n2. 确保您有GitHub仓库的推送权限';
+                          }
+                          
+                          solutions += '\n3. 手动将本地图片上传到GitHub';
+                          solutions += '\n4. 或使用GitHub Desktop工具推送更改';
+                          solutions += '\n\n二维码已生成，可正常使用';
+                          
+                          alert(errorMessage + solutions);
+                        } else {
+                          // 图片已成功上传到GitHub
+                          alert('✅ 报告图片已成功上传到GitHub Pages！');
+                        }
                       } else {
                         throw new Error(result.error || '上传失败');
                       }
