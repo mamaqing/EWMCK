@@ -87,9 +87,12 @@ const App: React.FC = () => {
   const reportRef = useRef<HTMLDivElement>(null);
   // 本地图片URL状态
   const [localImageURL, setLocalImageURL] = useState<string>('');
-  // 二维码URL，指向GitHub Pages上的报告图片
-  // 确保图片文件已上传到GitHub的"报告图片"目录
-  const reportURL = "https://mamaqing.github.io/EWMCK/报告图片/认知评估报告.png";
+  // 二维码URL，使用本地图片路径以提高加载速度
+  // 确保图片文件已放在项目的"报告图片"目录中
+  const reportURL = "/报告图片/认知评估报告.png";
+  // 图片加载状态
+  const [imageLoaded, setImageLoaded] = useState(false);
+  const [imageError, setImageError] = useState(false);
 
   return (
     <div 
