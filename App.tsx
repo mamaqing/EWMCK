@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { Header } from './components/Header';
 import { SimulationControl } from './components/SimulationControl';
 import { MetricCard } from './components/MetricCard';
@@ -7,8 +7,9 @@ import { ComparisonChart } from './components/ComparisonChart';
 import { Recommendations } from './components/Footer';
 import { INITIAL_METRICS, MOCK_TREND_DATA, ICONS, getEvaluation } from './constants';
 import { CategoryKey, MetricData } from './types';
-import { FileBarChart2, Activity, QrCode } from 'lucide-react';
+import { FileBarChart2, Activity, QrCode, Download } from 'lucide-react';
 import * as QRCodeLib from 'qrcode.react';
+import html2canvas from 'html2canvas';
 
 const App: React.FC = () => {
   const [metrics, setMetrics] = useState<Record<string, MetricData>>(INITIAL_METRICS);
@@ -82,8 +83,12 @@ const App: React.FC = () => {
 
   // QR Code state
   const [showQRCode, setShowQRCode] = useState(false);
-  // 将本地URL改为GitHub Pages的公开URL
-  const reportURL = "https://mamaqing.github.io/EWMCK/报告图片/认知评估报告.png";
+  // 报告容器ref用于截图
+  const reportRef = useRef<HTMLDivElement>(null);
+  // 本地图片URL状态
+  const [localImageURL, setLocalImageURL] = useState<string>('');
+  // 二维码URL，优先使用本地图片URL，否则使用默认地址
+  const reportURL = localImageURL || "https://mamaqing.github.io/EWMCK/报告图片/认知评估报告.png";
 
   return (
     <div 
@@ -100,6 +105,7 @@ const App: React.FC = () => {
 
       {/* Main Report "Paper" Container */}
       <main 
+        ref={reportRef}
         className="max-w-6xl mx-auto px-10 py-12 bg-white shadow-2xl relative print:shadow-none print:border-none print:p-0 overflow-hidden"
         style={{
             // 专业网格纹理：模拟医疗心电图纸或工程绘图纸的细腻方格
@@ -250,15 +256,55 @@ const App: React.FC = () => {
              <Recommendations />
         </div>
 
-        {/* QR Code Section */}
+        {/* 生成报告图片和二维码 */}
         <div className="mt-10 relative z-10 flex flex-col items-center">
-          <button 
-            onClick={() => setShowQRCode(!showQRCode)}
-            className="flex items-center gap-2 px-6 py-3 bg-slate-900 text-white rounded-lg hover:bg-slate-800 transition-colors duration-200 shadow-md hover:shadow-lg"
-          >
-            <QrCode size={18} />
-            {showQRCode ? '隐藏二维码' : '生成二维码'}
-          </button>
+          <div className="flex gap-4 mb-6">
+            <button 
+              onClick={async () => {
+                if (!reportRef.current) return;
+                
+                try {
+                  // 使用html2canvas生成报告图片
+                  const canvas = await html2canvas(reportRef.current, {
+                    scale: 2, // 提高分辨率
+                    useCORS: true,
+                    backgroundColor: '#ffffff'
+                  });
+                  
+                  // 创建图片URL
+                  const imgURL = canvas.toDataURL('image/png');
+                  setLocalImageURL(imgURL);
+                  
+                  // 保存图片到本地
+                  const link = document.createElement('a');
+                  link.download = '认知评估报告.png';
+                  link.href = imgURL;
+                  link.click();
+                  
+                  // 同时显示二维码
+                  setShowQRCode(true);
+                  
+                  // 提示用户扫码查看
+                  alert('报告图片已生成并保存！二维码已更新，可以直接扫码查看本地生成的报告图片。');
+                } catch (error) {
+                  console.error('生成报告图片失败:', error);
+                  alert('生成报告图片失败，请重试');
+                }
+              }}
+              className="flex items-center gap-2 px-6 py-3 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors duration-200 shadow-md hover:shadow-lg"
+            >
+              <Download size={18} />
+              生成并保存报告图片
+            </button>
+            
+            <button 
+              onClick={() => setShowQRCode(!showQRCode)}
+              className="flex items-center gap-2 px-6 py-3 bg-slate-900 text-white rounded-lg hover:bg-slate-800 transition-colors duration-200 shadow-md hover:shadow-lg"
+            >
+              <QrCode size={18} />
+              {showQRCode ? '隐藏二维码' : '生成二维码'}
+            </button>
+          </div>
           
           {showQRCode && (
             <div className="mt-6 p-4 bg-white rounded-lg border border-slate-200 shadow-md">
